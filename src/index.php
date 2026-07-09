@@ -13,6 +13,10 @@ require_once "generator.php";
 $dotenv = \Dotenv\Dotenv::createImmutable(dirname(__DIR__, 1));
 $dotenv->safeLoad();
 
+// GitHub buckets commits by the commit timestamp's local offset, so "today"
+// must follow the profile owner's timezone (UTC+8), not the server's UTC
+date_default_timezone_set($_ENV["TZ"] ?? "Asia/Taipei");
+
 // if environment variables are not loaded, display error
 if (!isset($_SERVER["TOKEN"])) {
     $message = file_exists(dirname(__DIR__ . "../.env", 1))
@@ -21,11 +25,12 @@ if (!isset($_SERVER["TOKEN"])) {
     renderOutput($message, 500);
 }
 
-// set cache to refresh once per day (24 hours)
-$cacheSeconds = CACHE_DURATION;
+// short client/proxy cache for freshness; edge serves stale instantly while
+// revalidating in the background so camo never hits its ~4s fetch timeout
+$cacheSeconds = 300;
 header("Expires: " . gmdate("D, d M Y H:i:s", time() + $cacheSeconds) . " GMT");
 header("Last-Modified: " . gmdate("D, d M Y H:i:s") . " GMT");
-header("Cache-Control: public, max-age=$cacheSeconds");
+header("Cache-Control: public, max-age=$cacheSeconds, s-maxage=$cacheSeconds, stale-while-revalidate=86400");
 
 // redirect to demo site if user is not given
 if (!isset($_REQUEST["user"])) {
