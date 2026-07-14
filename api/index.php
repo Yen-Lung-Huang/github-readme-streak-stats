@@ -14,8 +14,12 @@ $dotenv = \Dotenv\Dotenv::createImmutable(dirname(__DIR__, 1));
 $dotenv->safeLoad();
 
 // GitHub buckets commits by the commit timestamp's local offset, so "today"
-// must follow the profile owner's timezone (UTC+8), not the server's UTC
-date_default_timezone_set($_ENV["TZ"] ?? "Asia/Taipei");
+// must follow the profile owner's timezone (UTC+8), not the server's UTC.
+// Don't read $_ENV["TZ"]: Vercel sets it to ":UTC", which PHP rejects with a
+// notice that starts output and kills every later header() call.
+if (!@date_default_timezone_set($_ENV["CARD_TZ"] ?? "Asia/Taipei")) {
+    date_default_timezone_set("UTC");
+}
 
 // if environment variables are not loaded, display error
 if (!isset($_ENV["TOKEN"])) {
